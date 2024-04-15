@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_from_directory
 import pandas as pd
 import math
 import os
@@ -33,7 +33,8 @@ def calculate_direction(coord1, coord2):
 
 @app.route('/')
 def index():
-    return render_template('index4.html')
+    return render_template('index2.html')
+
 
 @app.route('/save_data', methods=['POST'])
 def save_data():
