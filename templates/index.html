@@ -4,6 +4,7 @@
     <title>Hedef/Atış Analiz Sistemi</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
     <style>
         #map { height: 80vh; }
     </style>
@@ -17,7 +18,7 @@
     <button onclick="addMarkerManually()">Add Marker Manually</button>
     <button onclick="saveMarkers()">Save Markers</button>
     <div id="message"></div>
-    <a id="downloadLink" style="display:none;" href="" download="noktalar.xlsx">Download Excel File</a>
+    <a id="downloadLink" style="display:none;" href="/download_excel" download="noktalar.xlsx">Download Excel File</a>
     <script>
         var map = L.map('map').setView([39.9334, 32.8597], 10);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -28,34 +29,40 @@
         var markerCounter = 1;
 
         function addMarkerManually() {
-            var lat = document.getElementById('latitude').value;
-            var lng = document.getElementById('longitude').value;
-            if (lat && lng) {
+            var lat = parseFloat(document.getElementById('latitude').value);
+            var lng = parseFloat(document.getElementById('longitude').value);
+            if (!isNaN(lat) && !isNaN(lng)) {
                 var latLng = L.latLng(lat, lng);
-                addMarker({latlng: latLng});
+                promptAndAddMarker(latLng);
+            } else {
+                alert("Please enter valid latitude and longitude values.");
             }
         }
 
-        function addMarker(e) {
+        function promptAndAddMarker(latLng) {
             var newName = prompt("Enter a name for the marker:", "Marker " + markerCounter);
-            if (!newName) return;
-            var newMarker = L.marker(e.latlng, {draggable: true}).addTo(map);
-            newMarker.bindPopup("<button onclick='removeMarker(" + markerCounter + ")'>Delete</button>");
-            markers[markerCounter] = newMarker;
-            markerCounter++;
+            if (newName) {
+                var newMarker = L.marker(latLng, {draggable: true, title: newName}).addTo(map);
+                newMarker.bindPopup("<b>" + newName + "</b><br><button onclick='removeMarker(\"" + newName + "\")'>Delete</button>");
+                markers[newName] = newMarker;
+                markerCounter++;
+            }
         }
 
-        function removeMarker(id) {
-            map.removeLayer(markers[id]);
-            delete markers[id];
+        function removeMarker(markerName) {
+            var marker = markers[markerName];
+            if (marker) {
+                map.removeLayer(marker);
+                delete markers[markerName];
+            }
         }
 
         function saveMarkers() {
             var markerData = [];
-            for (var id in markers) {
-                var marker = markers[id];
+            for (var name in markers) {
+                var marker = markers[name];
                 markerData.push({
-                    'id': id,
+                    'name': name,
                     'lat': marker.getLatLng().lat,
                     'lng': marker.getLatLng().lng
                 });
@@ -67,13 +74,15 @@
                 },
                 body: JSON.stringify(markerData)
             }).then(response => response.json()).then(data => {
-                document.getElementById('message').textContent = data.message;
-                document.getElementById('downloadLink').style.display = 'inline'; // Make the download link visible
-                document.getElementById('downloadLink').href = '/download_excel';
+                swal("Success!", data.message, "success").then(() => {
+                    document.getElementById('downloadLink').style.display = 'inline';
+                });
             });
         }
 
-        map.on('click', addMarker);
+        map.on('click', function(e) {
+            promptAndAddMarker(e.latlng);
+        });
     </script>
 </body>
 </html>
