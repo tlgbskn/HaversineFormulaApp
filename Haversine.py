@@ -21,7 +21,7 @@ def haversine(coord1, coord2):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index2.html')
 
 @app.route('/save_data', methods=['POST'])
 def save_data():
