@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Hedef/Atış Analiz Sistemi</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+    <style>
+        #map { height: 80vh; }
+        #controls { padding: 20px; }
+        #markerList { list-style-type: none; padding: 0; }
+        li { cursor: pointer; margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="controls">
+        <label for="latitude">Latitude:</label>
+        <input id="latitude" type="number" placeholder="39.9334" step="0.0001" min="-90" max="90">
+        <label for="longitude">Longitude:</label>
+        <input id="longitude" type="number" placeholder="32.8597" step="0.0001" min="-180" max="180">
+        <label for="color">Marker Color:</label>
+        <select id="color">
+            <option value="red">Red</option>
+            <option value="blue">Blue</option>
+            <option value="green">Green</option>
+            <option value="yellow">Yellow</option>
+        </select>
+        <button onclick="addMarkerManually()">Add Marker Manually</button>
+        <button onclick="saveMarkers()">Save Markers</button>
+        <a id="downloadLink" href="/download_excel" style="display:none;">Download Excel File</a>
+    </div>
+    <ul id="markerList"></ul>
+    <script>
+        var map = L.map('map').setView([39.9334, 32.8597], 10);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19
+        }).addTo(map);
+
+        var markers = {};
+        var markerCounter = 1;
+
+        function addMarkerManually() {
+            var lat = parseFloat(document.getElementById('latitude').value);
+            var lng = parseFloat(document.getElementById('longitude').value);
+            var color = document.getElementById('color').value;
+            if (!isNaN(lat) && !isNaN(lng)) {
+                var latLng = L.latLng(lat, lng);
+                promptAndAddMarker(latLng, color);
+            } else {
+                swal("Error", "Please enter valid latitude and longitude values.", "error");
+            }
+        }
+
+        function promptAndAddMarker(latLng, color) {
+            var newName = prompt("Enter a name for the marker:", "Marker " + markerCounter);
+            if (newName) {
+                var icon = new L.Icon({
+                    iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png`,
+                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                    shadowSize: [41, 41]
+                });
+                var newMarker = L.marker(latLng, { icon: icon, draggable: true, title: newName }).addTo(map);
+                markers[newName] = newMarker;
+                newMarker.bindPopup("<b>" + newName + "</b>");
+                markerCounter++;
+                updateMarkerList();
+                updateMarkerPopups();
+            }
+        }
+
+        function removeMarker(markerName) {
+            var marker = markers[markerName];
+            if (marker) {
+                map.removeLayer(marker);
+                delete markers[markerName];
+                updateMarkerList();
+                updateMarkerPopups();
+            }
+        }
+
+        function updateMarkerList() {
+            var markerList = document.getElementById('markerList');
+            markerList.innerHTML = '';
+            Object.keys(markers).forEach(function(name) {
+                var li = document.createElement('li');
+                li.textContent = name;
+                li.onclick = function() {
+                    map.setView(markers[name].getLatLng(), 14);
+                    markers[name].openPopup();
+                };
+                markerList.appendChild(li);
+            });
+        }
+
+        function updateMarkerPopups() {
+            Object.keys(markers).forEach(function(name) {
+                var marker = markers[name];
+                var popupContent = "<b>" + name + "</b><ul>";
+                Object.keys(markers).forEach(function(otherName) {
+                    if (name !== otherName) {
+                        var distance = calculateDistance(marker.getLatLng(), markers[otherName].getLatLng());
+                        var direction = calculateDirection(marker.getLatLng(), markers[otherName].getLatLng());
+                        popupContent += `<li>${distance.toFixed(2)} km ${direction} - ${otherName}</li>`;
+                    }
+                });
+                popupContent += "</ul>";
+                marker.bindPopup(popupContent);
+            });
+        }
+
+        function saveMarkers() {
+            var markerData = [];
+            for (var name in markers) {
+                var marker = markers[name];
+                markerData.push({
+                    'name': name,
+                    'lat': marker.getLatLng().lat,
+                    'lng': marker.getLatLng().lng
+                });
+            }
+            fetch('/save_data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(markerData)
+            }).then(response => response.json()).then(data => {
+                swal("Success!", data.message, "success").then(() => {
+                    document.getElementById('downloadLink').style.display = 'block';
+                });
+            });
+        }
+
+        function calculateDistance(latLng1, latLng2) {
+            var R = 6371; // Earth's radius in km
+            var dLat = deg2rad(latLng2.lat - latLng1.lat);
+            var dLon = deg2rad(latLng2.lng - latLng1.lng);
+            var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(deg2rad(latLng1.lat)) * Math.cos(deg2rad(latLng2.lat)) * 
+                    Math.sin(dLon/2) * Math.sin(dLon/2);
+            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c; // Distance in km
+        }
+
+        function calculateDirection(latLng1, latLng2) {
+            var y = Math.sin(deg2rad(latLng2.lng - latLng1.lng)) * Math.cos(deg2rad(latLng2.lat));
+            var x = Math.cos(deg2rad(latLng1.lat)) * Math.sin(deg2rad(latLng2.lat)) -
+                    Math.sin(deg2rad(latLng1.lat)) * Math.cos(deg2rad(latLng2.lat)) * Math.cos(deg2rad(latLng2.lng - latLng1.lng));
+            var brng = Math.atan2(y, x);
+            brng = rad2deg(brng);
+            if (brng < 0) {
+                brng += 360;
+            }
+            var directions = ["Kuzey", "Kuzeydoğu", "Doğu", "Güneydoğu", "Güney", "Güneybatı", "Batı", "Kuzeybatı", "Kuzey"];
+            return directions[Math.round(((brng + 22.5) % 360) / 45)];
+        }
+
+        function deg2rad(deg) {
+            return deg * (Math.PI/180)
+        }
+
+        function rad2deg(rad) {
+            return rad * (180/Math.PI)
+        }
+
+        map.on('click', function(e) {
+            promptAndAddMarker(e.latlng, document.getElementById('color').value);
+        });
+    </script>
+</body>
+</html>
