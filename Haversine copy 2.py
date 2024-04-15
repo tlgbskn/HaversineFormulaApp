@@ -52,7 +52,7 @@ def organize_data_for_excel(markers):
 
 @app.route('/')
 def index():
-    return render_template('index2.html')
+    #return render_template('index2.html')
 
 
 @app.route('/save_data', methods=['POST'])
