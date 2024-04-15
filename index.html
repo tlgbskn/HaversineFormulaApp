@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hedef/Atış Analiz Sistemi</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <style>
+        #map { height: 80vh; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <label for="latitude">Latitude:</label>
+    <input id="latitude" type="text" placeholder="39.9334">
+    <label for="longitude">Longitude:</label>
+    <input id="longitude" type="text" placeholder="32.8597">
+    <button onclick="addMarkerManually()">Add Marker Manually</button>
+    <button onclick="saveMarkers()">Save Markers</button>
+    <div id="message"></div>
+    <a id="downloadLink" style="display:none;" href="" download="noktalar.xlsx">Download Excel File</a>
+    <script>
+        var map = L.map('map').setView([39.9334, 32.8597], 10);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19
+        }).addTo(map);
+
+        var markers = {};
+        var markerCounter = 1;
+
+        function addMarkerManually() {
+            var lat = document.getElementById('latitude').value;
+            var lng = document.getElementById('longitude').value;
+            if (lat && lng) {
+                var latLng = L.latLng(lat, lng);
+                addMarker({latlng: latLng});
+            }
+        }
+
+        function addMarker(e) {
+            var newName = prompt("Enter a name for the marker:", "Marker " + markerCounter);
+            if (!newName) return;
+            var newMarker = L.marker(e.latlng, {draggable: true}).addTo(map);
+            newMarker.bindPopup("<button onclick='removeMarker(" + markerCounter + ")'>Delete</button>");
+            markers[markerCounter] = newMarker;
+            markerCounter++;
+        }
+
+        function removeMarker(id) {
+            map.removeLayer(markers[id]);
+            delete markers[id];
+        }
+
+        function saveMarkers() {
+            var markerData = [];
+            for (var id in markers) {
+                var marker = markers[id];
+                markerData.push({
+                    'id': id,
+                    'lat': marker.getLatLng().lat,
+                    'lng': marker.getLatLng().lng
+                });
+            }
+            fetch('/save_data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(markerData)
+            }).then(response => response.json()).then(data => {
+                document.getElementById('message').textContent = data.message;
+                document.getElementById('downloadLink').style.display = 'inline'; // Make the download link visible
+                document.getElementById('downloadLink').href = '/download_excel';
+            });
+        }
+
+        map.on('click', addMarker);
+    </script>
+</body>
+</html>
