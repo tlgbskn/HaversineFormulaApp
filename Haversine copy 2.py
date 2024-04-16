@@ -35,15 +35,16 @@ def calculate_direction(coord1, coord2):
 
 @app.route('/')
 def index():
-    return render_template('index2.html')
+    return render_template('index4.html')
 
-@app.route('/save_data', methods=['POST'])
-def save_data():
+@app.route('/save_data/<category>', methods=['POST'])
+def save_data_route(category):
     try:
         markers = request.get_json()
         if not markers:
             return jsonify({'error': 'No markers provided'}), 400
-
+        return save_data(category, markers)
+    
         df = organize_data_for_excel(markers)  # Excel verilerini düzenleme fonksiyonunu çağırın.
 
         if not path.exists(data_folder):

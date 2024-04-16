@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Hedef Girişi</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+    <style>
+        #map { height: 80vh; }
+        #markerList { list-style-type: none; }
+        li { cursor: pointer; margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <label for="latitude">Latitude:</label>
+    <input id="latitude" type="number" placeholder="39.9334" step="0.0001" min="-90" max="90">
+    <label for="longitude">Longitude:</label>
+    <input id="longitude" type="number" placeholder="32.8597" step="0.0001" min="-180" max="180">
+    <label for="color">Marker Color:</label>
+    <select id="color">
+        <option value="red">Red</option>
+        <option value="blue">Blue</option>
+        <option value="green">Green</option>
+        <option value="yellow">Yellow</option>
+    </select>
+    <button onclick="addMarkerManually()">Add Marker Manually</button>
+    <button onclick="saveMarkers()">Save Markers</button>
+    <div id="message"></div>
+    <a id="downloadLink" style="display:none;" href="/download_excel_targets" download="targets.xlsx">Download Excel File</a>
+    <ul id="markerList"></ul>
+    <script src="targets.js"></script>
+</body>
+</html>
