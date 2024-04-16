@@ -35,10 +35,10 @@
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19
         }).addTo(map);
-
+    
         var markers = {};
         var markerCounter = 1;
-
+    
         function addMarkerManually() {
             var lat = parseFloat(document.getElementById('latitude').value);
             var lng = parseFloat(document.getElementById('longitude').value);
@@ -50,7 +50,7 @@
                 swal("Error", "Please enter valid latitude and longitude values.", "error");
             }
         }
-
+    
         function promptAndAddMarker(latLng, color) {
             var newName = prompt("Enter a name for the marker:", "Marker " + markerCounter);
             if (newName) {
@@ -69,7 +69,7 @@
                 updateMarkerList();
             }
         }
-
+    
         function removeMarker(markerName) {
             var marker = markers[markerName];
             if (marker) {
@@ -78,7 +78,7 @@
                 updateMarkerList();
             }
         }
-
+    
         function updateMarkerList() {
             var markerList = document.getElementById('markerList');
             markerList.innerHTML = '';
@@ -89,7 +89,7 @@
                 markerList.appendChild(li);
             });
         }
-
+    
         function saveMarkers() {
             var markerData = [];
             for (var name in markers) {
@@ -106,16 +106,25 @@
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(markerData)
-            }).then(response => response.json()).then(data => {
+            }).then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            }).then(data => {
                 swal("Success!", data.message, "success").then(() => {
                     document.getElementById('downloadLink').style.display = 'inline';
+                    document.getElementById('downloadLink').href = data.download_url; // Güncellenmiş indirme URL'ini ayarlayın.
                 });
+            }).catch(error => {
+                swal("Error", "There was a problem saving the markers: " + error.message, "error");
             });
         }
-
+    
         map.on('click', function(e) {
             promptAndAddMarker(e.latlng, document.getElementById('color').value);
         });
     </script>
+    
 </body>
 </html>

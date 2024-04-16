@@ -33,7 +33,7 @@ def calculate_direction(coord1, coord2):
 
 @app.route('/')
 def index():
-    return render_template('index2.html')
+    return render_template('index4.html')
 
 
 @app.route('/save_data', methods=['POST'])

@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory, render_template, url_for
 import pandas as pd
 import math
 import os
@@ -33,27 +33,9 @@ def calculate_direction(coord1, coord2):
     directions = ["Kuzey", "Kuzeydoğu", "Doğu", "Güneydoğu", "Güney", "Güneybatı", "Batı", "Kuzeybatı", "Kuzey"]
     return directions[int((angle + 22.5) / 45)]
 
-# Excel'e veri yazma fonksiyonu
-def organize_data_for_excel(markers):
-    rows = []
-    for i, marker1 in enumerate(markers):
-        row = {'ID': marker1['name'], 'Latitude': marker1['lat'], 'Longitude': marker1['lng']}
-        for j, marker2 in enumerate(markers):
-            if i != j:
-                distance = haversine((marker1['lat'], marker1['lng']), (marker2['lat'], marker2['lng']))
-                direction = calculate_direction((marker1['lat'], marker1['lng']), (marker2['lat'], marker2['lng']))
-                row[f'Distance to {marker2["name"]}'] = f"{distance:.2f} km"
-                row[f'Direction to {marker2["name"]}'] = direction
-            else:
-                row[f'Distance to {marker2["name"]}'] = "0 km"
-                row[f'Direction to {marker2["name"]}'] = "Self"
-        rows.append(row)
-    return pd.DataFrame(rows)
-
 @app.route('/')
 def index():
-    #return render_template('index2.html')
-
+    return render_template('index2.html')
 
 @app.route('/save_data', methods=['POST'])
 def save_data():
@@ -62,18 +44,21 @@ def save_data():
         if not markers:
             return jsonify({'error': 'No markers provided'}), 400
 
-        df = organize_data_for_excel(markers)
+        df = organize_data_for_excel(markers)  # Excel verilerini düzenleme fonksiyonunu çağırın.
+
         if not path.exists(data_folder):
             os.makedirs(data_folder)
-        df.to_excel(path.join(data_folder, 'noktalar.xlsx'), index=False)
+        file_path = path.join(data_folder, 'noktalar.xlsx')
+        df.to_excel(file_path, index=False)
 
-        return jsonify({'message': 'Data saved successfully!'})
+        download_url = url_for('download_excel', filename='noktalar.xlsx')
+        return jsonify({'message': 'Data saved successfully!', 'download_url': download_url})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/download_excel')
-def download_excel():
-    return send_from_directory(directory=data_folder, path='noktalar.xlsx', as_attachment=True)
+@app.route('/download_excel/<filename>')
+def download_excel(filename):
+    return send_from_directory(directory=data_folder, path=filename, as_attachment=True)
 
 if __name__ == '__main__':
     app.run(debug=True)
